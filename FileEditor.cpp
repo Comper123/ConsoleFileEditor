@@ -1,4 +1,4 @@
-﻿// TextEditor.cpp : Этот файл содержит функцию "main". Здесь начинается и заканчивается выполнение программы.
+// TextEditor.cpp : Этот файл содержит функцию "main". Здесь начинается и заканчивается выполнение программы.
 //
 
 #include <iostream>
@@ -11,15 +11,44 @@
 
 using namespace std;
 
+
+class FileExtensionError : public exception
+{
+    private:
+        string message;
+    public:
+        FileExtensionError(const char* msg) : message(msg){}
+        const char* what() const noexcept {return message.c_str();}
+};
+
+class FileNotFoundError : public exception
+{
+private:
+    string message;
+public:
+    FileNotFoundError(const char* msg) : message(msg) {}
+    const char* what() const noexcept { return message.c_str(); }
+};
+
+
 struct FileHeader {
     int autorLength;
     int textLength;
 };
 
-void fileWrite(string filename, vector<string> file) {
-    ofstream fout;
+string getFileExtension(const string& filename) {
+    size_t dotPos = filename.find_last_of('.');
+    if (dotPos != string::npos && dotPos != filename.length() - 1) {
+        return filename.substr(dotPos + 1);
+    }
+    return ""; // расширение не найдено
+}
 
-    fout.open(filename);
+void fileWrite(string filename, vector<string> file, bool overwrite = false) {
+    if (getFileExtension(filename) != "txt") {
+        throw FileExtensionError("Неподдерживаемое расширение файла.");
+    }
+    ofstream fout(filename, overwrite ? ios::out | ios::trunc : ios::out);
     if (fout.is_open()) {
         // Записываем новое содержимое в файл
         for (const auto& line : file) {
@@ -33,6 +62,9 @@ void fileWrite(string filename, vector<string> file) {
 }
 
 vector<string> fileRead(string filename) {
+    if (getFileExtension(filename) != "txt") {
+        throw FileExtensionError("Неподдерживаемое расширение файла.");
+    }
     vector<string> file;
     string line;
     ifstream fin(filename);
@@ -44,7 +76,7 @@ vector<string> fileRead(string filename) {
         fin.close();
     }
     else {
-        throw "FileOpenError: Файл не найден";
+        throw FileNotFoundError("Такого файла не существует");
     }
     return file;
 }
@@ -81,7 +113,9 @@ int main()
         "4). Сменить рабочий файл\n"
         "5). Очистить файл\n"
         "6). Заменить все вхождения\n"
-        "7). Записать файл в бинарный файл\n";
+        "7). Записать файл в бинарный файл\n"
+        "8). Прочитать файл бинарный\n"
+        "9). Создать текстовый файл\n";
 
     setlocale(0, "");
     int command = -1;
@@ -102,6 +136,13 @@ int main()
     string autor = "Барышников Илья";
     string binaryFileName;
     ofstream outBinary;
+    string text;
+    FileHeader writeHeader;
+
+    FileHeader openHeader;
+    ifstream inBinary;
+    string oba;
+    string obt;
 
     while (command != 0) {
         cout << programInfo;
@@ -164,7 +205,7 @@ int main()
                 cin >> filename;
                 fin.open(filename);
                 if (!fin.is_open()) {
-                    throw "NewFileError: Такого файла не существует";
+                    throw FileNotFoundError("Такого файла не существует");
                 }
                 fin.close();
                 break;
@@ -202,30 +243,76 @@ int main()
                 cout << "Введите название бинарного файла: ";
                 cin >> binaryFileName;
                 outBinary.open(binaryFileName, ios::binary);
-
+                text = "";
                 // собираем текст
-                string text;
                 for (const auto& line : rf) {
                     text += line + '\n';
                 }
 
                 // заполняем структуру
-                FileHeader header;
-                header.autorLength = autor.size();
-                header.textLength = text.size();
+                
+                writeHeader.autorLength = autor.size();
+                writeHeader.textLength = text.size();
                    
                 // 1. пишем структуру
-                outBinary.write((char*)&header, sizeof(header));
+                outBinary.write((char*)&writeHeader, sizeof(writeHeader));
 
                 // 2. пишем данные
-                outBinary.write(autor.c_str(), header.autorLength);
-                outBinary.write(text.c_str(), header.textLength);
+                outBinary.write((autor + "\n").c_str(), writeHeader.autorLength);
+                outBinary.write(text.c_str(), writeHeader.textLength);
 
                 outBinary.close();
+                break;
+            case 8:
+                cout << "Введите название бинарного файла: ";
+                cin >> filename;
+
+                if (getFileExtension(filename) != "bin") {
+                    throw FileExtensionError("Файл должен быть с расширением .bin");
+                }
+
+                inBinary.open(filename, ios::binary);
+
+                if (!inBinary.is_open()) {
+                    throw FileNotFoundError("Не удалось открыть бинарный файл");
+                }
+
+                FileHeader header;
+
+                // читаем header
+                inBinary.read((char*)&header, sizeof(header));
+
+                // читаем автора
+                oba = string(header.autorLength, '\0');
+                inBinary.read(&oba[0], header.autorLength);
+
+                // читаем текст
+                obt = string(header.textLength, '\0');
+                inBinary.read(&obt[0], header.textLength);
+
+                inBinary.close();
+
+                cout << "Автор: " << oba << endl;
+                cout << "Текст:\n" << obt << endl;
+
+                break;
+            case 9:
+                cout << "Введите название создаваемого файла: ";
+                cin >> filename;
+                rf.clear();
+                fileWrite(filename, rf, true);
+                break;
+            default:
+                cout << "Выберите корректное действие";
             }
+            
+               
         }
-        catch (const char* error_message) {
-            cout << error_message << "\n";
+        catch (FileNotFoundError& e) {
+            cout << e.what() << "\n";
+        }
+        catch (FileExtensionError& e) {
+            cout << e.what() << "\n";
         }
     }
 };
