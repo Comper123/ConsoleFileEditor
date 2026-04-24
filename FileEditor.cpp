@@ -1,4 +1,4 @@
-// TextEditor.cpp : Этот файл содержит функцию "main". Здесь начинается и заканчивается выполнение программы.
+﻿// TextEditor.cpp : Этот файл содержит функцию "main". Здесь начинается и заканчивается выполнение программы.
 //
 
 #include <iostream>
@@ -106,7 +106,6 @@ int main()
     string programInfo =
         "\n\nПеред вами текстовый редактор 1.0\n"
         "Выберите действие:\n"
-        "0). Закрыть программу\n"
         "1). Прочитать файл\n"
         "2). Заменить строку в файле по ее номеру\n"
         "3). Добавить строку в конец\n"
@@ -115,7 +114,8 @@ int main()
         "6). Заменить все вхождения\n"
         "7). Записать файл в бинарный файл\n"
         "8). Прочитать файл бинарный\n"
-        "9). Создать текстовый файл\n";
+        "9). Создать текстовый файл\n"
+        "10). Закрыть программу\n";
 
     setlocale(0, "");
     int command = -1;
@@ -144,10 +144,11 @@ int main()
     string oba;
     string obt;
 
-    while (command != 0) {
+    while (command != 10) {
         cout << programInfo;
         cout << "\nВведите действие: ";
         cin >> command;
+    
         try {
             switch (command) {
             case 1:
@@ -240,6 +241,11 @@ int main()
                 fileWrite(filename, rf);
                 break;
             case 7:
+                if (rf.size() == 0) {
+                    cout << "Введите имя файла: ";
+                    cin >> filename;
+                    rf = fileRead(filename);
+                }
                 cout << "Введите название бинарного файла: ";
                 cin >> binaryFileName;
                 outBinary.open(binaryFileName, ios::binary);
@@ -292,7 +298,7 @@ int main()
 
                 inBinary.close();
 
-                cout << "Автор: " << oba << endl;
+                cout << "Автор:\n" << oba << endl;
                 cout << "Текст:\n" << obt << endl;
 
                 break;
@@ -302,11 +308,13 @@ int main()
                 rf.clear();
                 fileWrite(filename, rf, true);
                 break;
+            case 10:
+                command = 10;
+                cout << "Досвидания";
+                break;
             default:
                 cout << "Выберите корректное действие";
-            }
-            
-               
+            }               
         }
         catch (FileNotFoundError& e) {
             cout << e.what() << "\n";
