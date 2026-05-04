@@ -1,6 +1,6 @@
 ﻿// TextEditor.cpp : Этот файл содержит функцию "main". Здесь начинается и заканчивается выполнение программы.
 //
-
+#define NOMINMAX
 #include <iostream>
 #include <windows.h>
 #include <fstream>
@@ -8,6 +8,7 @@
 #include <clocale>
 #include <string>
 #include <cstdio>
+#include <limits>
 
 using namespace std;
 
@@ -148,7 +149,15 @@ int main()
         cout << programInfo;
         cout << "\nВведите действие: ";
         cin >> command;
-    
+        
+        if (cin.fail()) {
+            cin.clear(); // сброс ошибки
+            cin.ignore(numeric_limits<streamsize>::max(), '\n'); // очистка буфера
+            cout << "Ошибка: введите число!\n";
+            command = -1;
+            continue;
+        }
+
         try {
             switch (command) {
             case 1:
@@ -178,10 +187,11 @@ int main()
                     fin.close();
                     cout << "Введите новую строку, заменяющую эту:\n";
                     cout << replacedLineNumber << " " << file[replacedLineNumber - 1] << "\n";
-                    cin >> replacedLine;
+                    cin.ignore();
+                    getline(cin, replacedLine);
                     file[replacedLineNumber - 1] = replacedLine;
 
-                    fileWrite(filename, file);
+                    fileWrite(filename, file, true);
                 }
                 else {
                     cout << "Ошибка открытия файла!\n";
@@ -195,7 +205,8 @@ int main()
                 }
                 rf = fileRead(filename);
                 cout << "Введите новую строку: ";
-                cin >> newLine;
+                cin.ignore();
+                getline(cin, newLine);
 
                 rf.push_back(newLine);
                 fileWrite(filename, rf);
@@ -228,11 +239,16 @@ int main()
                 }
                 rf = fileRead(filename);
                 cout << "Введите слово, которое хотите заменить: ";
-                cin >> replacedWord;
+                cin.ignore();
+                getline(cin, replacedWord);
+                if (replacedWord.empty()) {
+                    cout << "Нельзя заменять пустую строку!\n";
+                    break;
+                }
                 cout << "Введите заменяющее слово: ";
-                cin >> replacingWord;
+                getline(cin, replacingWord);
                 for (int i = 0; i < rf.size(); ++i) {
-                    while (rf[i].find(replacedWord) != -1) {
+                    while (rf[i].find(replacedWord) != string::npos) {
                         start = rf[i].find(replacedWord);
                         end = replacedWord.size();
                         rf[i].replace(start, end, replacingWord);
